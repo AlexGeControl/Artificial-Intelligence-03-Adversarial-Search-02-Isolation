@@ -13,7 +13,6 @@ from copy import copy
 
 TIME_LIMIT_MILLIS = 150
 
-
 class Board(object):
     """Implement a model for the game Isolation assuming each player moves like
     a knight in chess.

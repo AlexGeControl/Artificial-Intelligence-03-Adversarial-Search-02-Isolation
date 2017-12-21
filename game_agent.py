@@ -34,8 +34,12 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    return float(
+        len(game.get_legal_moves(player)) - len(game.get_legal_moves(opponent))
+    )
 
 
 def custom_score_2(game, player):
@@ -118,7 +122,6 @@ class IsolationPlayer:
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
 
-
 class MinimaxPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using depth-limited minimax
     search. You must finish and test this player to make sure it properly uses
@@ -170,6 +173,98 @@ class MinimaxPlayer(IsolationPlayer):
         # Return the best move from the last completed search iteration
         return best_move
 
+    def _maximize(self, active_player, game, depth):
+        """ Implement minimization node in adversarial search
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do maximization:
+        max_utility = float("-inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._minimize(active_player, next_game, depth - 1)
+            # update max utility:
+            max_utility = max(max_utility, utility)
+
+        return max_utility
+
+    def _minimize(self, active_player, game, depth):
+        """ Implement minimization node in adversarial search
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do minimization:
+        min_utility = float("inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._maximize(active_player, next_game, depth - 1)
+            # update min utility:
+            min_utility = min(min_utility, utility)
+
+        return min_utility
+
     def minimax(self, game, depth):
         """Implement depth-limited minimax search algorithm as described in
         the lectures.
@@ -209,12 +304,30 @@ class MinimaxPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        # time out test:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # identify active player:
+        active_player = game.active_player
 
+        # identify max utility move:
+        max_utility = float("-inf")
+        max_move = (-1, -1)
+
+        # able to perform search:
+        if depth > 0:
+            for move in game.get_legal_moves(active_player):
+                # next game:
+                next_game = game.forecast_move(move)
+                # next game utility:
+                utility = self._minimize(active_player, next_game, depth - 1)
+                # update max utility move:
+                if max_utility < utility:
+                    max_utility = utility
+                    max_move = move
+
+        return max_move
 
 class AlphaBetaPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using iterative deepening minimax
@@ -254,8 +367,133 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # Initialize the best move so that this function returns something
+        # in case the search fails due to timeout
+        best_move = (-1, -1)
+
+        # maximum depth:
+        N = game.width * game.height
+
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            for max_depth in range(1, N + 1):
+                best_move = self.alphabeta(game, max_depth)
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
+
+        # Return the best move from the last completed search iteration
+        return best_move
+
+    def _maximize(self, active_player, game, depth, alpha, beta):
+        """ Implement minimization node in adversarial search with alpha-beta pruning
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # alpha-beta window test:
+        if alpha > beta:
+            return float("-inf")
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do maximization:
+        max_utility = float("-inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._minimize(active_player, next_game, depth - 1, alpha, beta)
+            # pruning test:
+            if utility >= beta:
+                return utility
+            # update max utility:
+            max_utility = max(max_utility, utility)
+            # update alpha:
+            alpha = max(alpha, max_utility)
+
+        return max_utility
+
+    def _minimize(self, active_player, game, depth, alpha, beta):
+        """ Implement minimization node in adversarial search with alpha-beta pruning
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # alpha-beta window test:
+        if alpha > beta:
+            return float("inf")
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do minimization:
+        min_utility = float("inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._maximize(active_player, next_game, depth - 1, alpha, beta)
+            # pruning test:
+            if utility <= alpha:
+                return utility
+            # update min utility:
+            min_utility = min(min_utility, utility)
+            # update beta:
+            beta = min(beta, min_utility)
+
+        return min_utility
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -302,8 +540,29 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        # time out test:
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # identify active player:
+        active_player = game.active_player
+
+        # identify max utility move:
+        max_utility = float("-inf")
+        max_move = (-1, -1)
+
+        # able to perform search:
+        if depth > 0 and alpha <= beta:
+            for move in game.get_legal_moves(active_player):
+                # next game:
+                next_game = game.forecast_move(move)
+                # next game utility:
+                utility = self._minimize(active_player, next_game, depth - 1, alpha, beta)
+                # update max utility move:
+                if max_utility < utility:
+                    max_utility = utility
+                    max_move = move
+                # update alpha:
+                alpha = max(alpha, max_utility)
+
+        return max_move
