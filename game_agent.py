@@ -3,12 +3,11 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 import random
-
+import numpy as np
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
-
 
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -34,13 +33,27 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
     # identify opponent:
     opponent = game.get_opponent(player)
 
-    return float(
-        len(game.get_legal_moves(player)) - len(game.get_legal_moves(opponent))
-    )
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
 
+    # heuristic score:
+    delta = float(num_active_moves - num_opponent_moves)
+
+    score = np.sign(delta) * (delta**2)
+
+    return score
 
 def custom_score_2(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -64,9 +77,27 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
 
+    if game.is_winner(player):
+        return float("inf")
+
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
+
+    # heuristic score:
+    delta = float(num_active_moves - num_opponent_moves)
+
+    score = delta**3
+
+    return score
 
 def custom_score_3(game, player):
     """Calculate the heuristic value of a game state from the point of view
@@ -90,9 +121,45 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
 
+    if game.is_winner(player):
+        return float("inf")
+
+    def get_player_center_score(player):
+        """Calculate center score for input legal moves
+        """
+        w, h = game.width / 2., game.height / 2.
+        y, x = game.get_player_location(player)
+
+        return (h - y)**2 + (w - x)**2
+
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    # active center score:
+    score_active = get_player_center_score(player)
+    # opponent center score:
+    score_opponent = get_player_center_score(opponent)
+
+    # heuristic score:
+    delta_center_score = float(score_active - score_opponent)
+    score_center_score = delta_center_score
+
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
+
+    # heuristic score:
+    delta_num_moves = float(num_active_moves - num_opponent_moves)
+    score_num_moves = np.sign(delta_num_moves) * (delta_num_moves**2)
+
+    score = 0.382 * score_center_score + 0.618 * score_num_moves
+
+    return score
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never

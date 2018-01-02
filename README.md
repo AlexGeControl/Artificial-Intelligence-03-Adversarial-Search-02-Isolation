@@ -1,140 +1,704 @@
-
-# Build a Game-playing Agent
+# Isolation-Playing Agent through Adversarial Search
 
 ![Example game of isolation](viz.gif)
 
-## Synopsis
+## Adversarial Search Implementation
 
-In this project, students will develop an adversarial search agent to play the game "Isolation".  Isolation is a deterministic, two-player game of perfect information in which the players alternate turns moving a single piece from one cell to another on a board.  Whenever either player occupies a cell, that cell becomes blocked for the remainder of the game.  The first player with no remaining legal moves loses, and the opponent is declared the winner.  These rules are implemented in the `isolation.Board` class provided in the repository. 
+### Min-Max Search
 
-This project uses a version of Isolation where each agent is restricted to L-shaped movements (like a knight in chess) on a rectangular grid (like a chess or checkerboard).  The agents can move to any open cell on the board that is 2-rows and 1-column or 2-columns and 1-row away from their current position on the board. Movements are blocked at the edges of the board (the board does not wrap around), however, the player can "jump" blocked or occupied spaces (just like a knight in chess).
+The min-max search agent is implemented as follows.
+The implementation follows the <a href="https://github.com/aimacode/aima-pseudocode/blob/master/md/Minimax-Decision.md">AIMA Pseudocode</a>
 
-Additionally, agents will have a fixed time limit each turn to search for the best move and respond.  If the time limit expires during a player's turn, that player forfeits the match, and the opponent wins.
+---
+__function__ MINIMAX-DECISION(_state_) __returns__ _an action_  
+&emsp;__return__ arg max<sub> _a_ &Element; ACTIONS(_s_)</sub> MIN\-VALUE(RESULT(_state_, _a_))  
 
-Students only need to modify code in the `game_agent.py` file to complete the project.  Additional files include example Player and evaluation functions, the game board class, and a template to develop local unit tests.  
+---
+__function__ MAX\-VALUE(_state_) __returns__ _a utility value_  
+&emsp;__if__ TERMINAL\-TEST(_state_) __then return__ UTILITY(_state_)  
+&emsp;_v_ &larr; &minus;&infin;  
+&emsp;__for each__ _a_ __in__ ACTIONS(_state_) __do__  
+&emsp;&emsp;&emsp;_v_ &larr; MAX(_v_, MIN\-VALUE(RESULT(_state_, _a_)))  
+&emsp;__return__ _v_  
 
+---
+__function__ MIN\-VALUE(_state_) __returns__ _a utility value_  
+&emsp;__if__ TERMINAL\-TEST(_state_) __then return__ UTILITY(_state_)  
+&emsp;_v_ &larr; &infin;  
+&emsp;__for each__ _a_ __in__ ACTIONS(_state_) __do__  
+&emsp;&emsp;&emsp;_v_ &larr; MIN(_v_, MAX\-VALUE(RESULT(_state_, _a_)))  
+&emsp;__return__ _v_  
 
-## Instructions
+```python
+class MinimaxPlayer(IsolationPlayer):
+    """Game-playing agent that chooses a move using depth-limited minimax
+    search. You must finish and test this player to make sure it properly uses
+    minimax to return a good move before the search time limit expires.
+    """
 
-In order to complete the Isolation project, students must submit code that passes all test cases for the required functions in `game_agent.py` and complete a report as specified in the rubric.  Students can submit using the [Udacity Project Assistant]() command line utility.  Students will receive feedback on test case success/failure after each submission.
+    def get_move(self, game, time_left):
+        """Search for the best move from the available legal moves and return a
+        result before the time limit expires.
 
-Students must implement the following functions:
+        **************  YOU DO NOT NEED TO MODIFY THIS FUNCTION  *************
 
-- `MinimaxPlayer.minimax()`: implement minimax search
-- `AlphaBetaPlayer.alphabeta()`: implement minimax search with alpha-beta pruning
-- `AlphaBetaPlayer.get_move()`: implement iterative deepening search
-- `custom_score()`: implement your own best position evaluation heuristic
-- `custom_score_2()`: implement your own alternate position evaluation heuristic
-- `custom_score_3()`: implement your own alternate position evaluation heuristic
+        For fixed-depth search, this function simply wraps the call to the
+        minimax method, but this method provides a common interface for all
+        Isolation agents, and you will replace it in the AlphaBetaPlayer with
+        iterative deepening search.
 
-You may write or modify code within each file (but you must maintain compatibility with the function signatures provided).  You may add other classes, functions, etc., as needed, but it is not required.
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
 
-The Project Assistant sandbox for this project places some restrictions on the modules available and blocks calls to some of the standard library functions.  In general, standard library functions that introspect code running in the sandbox are blocked, and the PA only allows the following modules `random`, `numpy`, `scipy`, `sklearn`, `itertools`, `math`, `heapq`, `collections`, `array`, `copy`, and `operator`. (Modules within these packages are also allowed, e.g., `numpy.random`.)
+        time_left : callable
+            A function that returns the number of milliseconds left in the
+            current turn. Returning with any less than 0 ms remaining forfeits
+            the game.
 
+        Returns
+        -------
+        (int, int)
+            Board coordinates corresponding to a legal move; may return
+            (-1, -1) if there are no available legal moves.
+        """
+        self.time_left = time_left
 
-### Quickstart Guide
+        # Initialize the best move so that this function returns something
+        # in case the search fails due to timeout
+        best_move = (-1, -1)
 
-The following example creates a game and illustrates the basic API.  You can run this example by activating your aind anaconda environment and executing the command `python sample_players.py`
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            return self.minimax(game, self.search_depth)
 
-    from isolation import Board
-    from sample_players import RandomPlayer
-    from sample_players import GreedyPlayer
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
 
-    # create an isolation board (by default 7x7)
-    player1 = RandomPlayer()
-    player2 = GreedyPlayer()
-    game = Board(player1, player2)
+        # Return the best move from the last completed search iteration
+        return best_move
 
-    # place player 1 on the board at row 2, column 3, then place player 2 on
-    # the board at row 0, column 5; display the resulting board state.  Note
-    # that the .apply_move() method changes the calling object in-place.
-    game.apply_move((2, 3))
-    game.apply_move((0, 5))
-    print(game.to_string())
+    def _maximize(self, active_player, game, depth):
+        """ Implement minimization node in adversarial search
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
 
-    # players take turns moving on the board, so player1 should be next to move
-    assert(player1 == game.active_player)
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
 
-    # get a list of the legal moves available to the active player
-    print(game.get_legal_moves())
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
 
-    # get a successor of the current state by making a copy of the board and
-    # applying a move. Notice that this does NOT change the calling object
-    # (unlike .apply_move()).
-    new_game = game.forecast_move((1, 1))
-    assert(new_game.to_string() != game.to_string())
-    print("\nOld state:\n{}".format(game.to_string()))
-    print("\nNew state:\n{}".format(new_game.to_string()))
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
 
-    # play the remainder of the game automatically -- outcome can be "illegal
-    # move", "timeout", or "forfeit"
-    winner, history, outcome = game.play()
-    print("\nWinner: {}\nOutcome: {}".format(winner, outcome))
-    print(game.to_string())
-    print("Move history:\n{!s}".format(history))
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
 
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
 
-### Coding
+        # do maximization:
+        max_utility = float("-inf")
 
-The steps below outline a suggested process for completing the project -- however, this is just a suggestion to help you get started.
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._minimize(active_player, next_game, depth - 1)
+            # update max utility:
+            max_utility = max(max_utility, utility)
 
-A stub for writing unit tests is provided in the [`test_game_agent.py`](tests/test_game_agent.py) file (no local test cases are provided). In order to run your tests, execute `python -m unittest` command (See the [unittest](https://docs.python.org/3/library/unittest.html#basic-example) module for information on getting started.)
+        return max_utility
 
-The primary mechanism for testing your code will be the Udacity Project Assistant command line utility.  You can install the Udacity-PA tool by activating your aind anaconda environment, then running `pip install udacity-pa`.  You can submit your code for scoring by running `udacity submit isolation`.  The project assistant server has a collection of unit tests that it will execute on your code, and it will provide feedback on any successes or failures.  You must pass all test cases in the project assistant before you can complete the project by submitting your report for review.
+    def _minimize(self, active_player, game, depth):
+        """ Implement minimization node in adversarial search
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
 
-0. Verify that the Udacity-PA tool is installed properly by submitting the project. Run `udacity submit isolation`. (You should see a list of test cases that failed -- that's expected because you haven't implemented any code yet.)
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
 
-0. Modify the `MinimaxPlayer.minimax()` method to return any legal move for the active player.  Resubmit your code to the project assistant and the minimax interface test should pass.
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
 
-0. Further modify the `MinimaxPlayer.minimax()` method to implement the full recursive search procedure described in lecture (ref. [AIMA Minimax Decision](https://github.com/aimacode/aima-pseudocode/blob/master/md/Minimax-Decision.md)).  Resubmit your code to the project assistant and both the minimax interface and functional test cases will pass.
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
 
-0. Start on the alpha beta test cases. Modify the `AlphaBetaPlayer.alphabeta()` method to return any legal move for the active player.  Resubmit your code to the project assistant and the alphabeta interface test should pass.
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
 
-0. Further modify the `AlphaBetaPlayer.alphabeta()` method to implement the full recursive search procedure described in lecture (ref. [AIMA Alpha-Beta Search](https://github.com/aimacode/aima-pseudocode/blob/master/md/Alpha-Beta-Search.md)).  Resubmit your code to the project assistant and both the alphabeta interface and functional test cases will pass.
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
 
-0. You can pass the interface test for the `AlphaBetaPlayer.get_move()` function by copying the code from `MinimaxPlayer.get_move()`.  Resubmit your code to the project assistant to see that the `get_move()` interface test case passes.
+        # do minimization:
+        min_utility = float("inf")
 
-0. Pass the test_get_move test by modifying `AlphaBetaPlayer.get_move()` to implement Iterative Deepening.  See Also [AIMA Iterative Deepening Search](https://github.com/aimacode/aima-pseudocode/blob/master/md/Iterative-Deepening-Search.md)
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._maximize(active_player, next_game, depth - 1)
+            # update min utility:
+            min_utility = min(min_utility, utility)
 
-0. Finally, pass the heuristic tests by implementing any heuristic in `custom_score()`, `custom_score_2()`, and `custom_score_3()`.  (These test cases only validate the return value type -- it does not check for "correctness" of your heuristic.)  You can see example heuristics in the `sample_players.py` file.
+        return min_utility
 
+    def minimax(self, game, depth):
+        """Implement depth-limited minimax search algorithm as described in
+        the lectures.
 
-### Tournament
+        This should be a modified version of MINIMAX-DECISION in the AIMA text.
+        https://github.com/aimacode/aima-pseudocode/blob/master/md/Minimax-Decision.md
 
-The `tournament.py` script is used to evaluate the effectiveness of your custom heuristics.  The script measures relative performance of your agent (named "Student" in the tournament) in a round-robin tournament against several other pre-defined agents.  The Student agent uses time-limited Iterative Deepening along with your custom heuristics.
+        **********************************************************************
+            You MAY add additional methods to this class, or define helper
+                 functions to implement the required functionality.
+        **********************************************************************
 
-The performance of time-limited iterative deepening search is hardware dependent (faster hardware is expected to search deeper than slower hardware in the same amount of time).  The script controls for these effects by also measuring the baseline performance of an agent called "ID_Improved" that uses Iterative Deepening and the improved_score heuristic defined in `sample_players.py`.  Your goal is to develop a heuristic such that Student outperforms ID_Improved. (NOTE: This can be _very_ challenging!)
+        Parameters
+        ----------
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
 
-The tournament opponents are listed below. (See also: sample heuristics and players defined in sample_players.py)
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
 
-- Random: An agent that randomly chooses a move each turn.
-- MM_Open: MinimaxPlayer agent using the open_move_score heuristic with search depth 3
-- MM_Center: MinimaxPlayer agent using the center_score heuristic with search depth 3
-- MM_Improved: MinimaxPlayer agent using the improved_score heuristic with search depth 3
-- AB_Open: AlphaBetaPlayer using iterative deepening alpha-beta search and the open_move_score heuristic
-- AB_Center: AlphaBetaPlayer using iterative deepening alpha-beta search and the center_score heuristic
-- AB_Improved: AlphaBetaPlayer using iterative deepening alpha-beta search and the improved_score heuristic
+        Returns
+        -------
+        (int, int)
+            The board coordinates of the best move found in the current search;
+            (-1, -1) if there are no legal moves
 
-## Submission
+        Notes
+        -----
+            (1) You MUST use the `self.score()` method for board evaluation
+                to pass the project tests; you cannot call any other evaluation
+                function directly.
 
-Before submitting your solution to a reviewer, you are required to submit your project to Udacity's Project Assistant, which will provide some initial feedback.
+            (2) If you use any helper functions (e.g., as shown in the AIMA
+                pseudocode) then you must copy the timer check into the top of
+                each helper function or else your agent will timeout during
+                testing.
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
 
-Please see the instructions in the [AIND-Sudoku](https://github.com/udacity/AIND-Sudoku#submission) project repository for installation and setup instructions. 
+        # identify active player:
+        active_player = game.active_player
 
-To submit your code to the project assistant, run `udacity submit isolation` from within the top-level directory of this project. You will be prompted for a username and password. If you login using google or facebook, follow the [instructions for using a jwt](https://project-assistant.udacity.com/faq).
+        # identify max utility move:
+        max_utility = float("-inf")
+        max_move = (-1, -1)
 
-This process will create a zipfile in your top-level directory named `isolation-<id>.zip`. This is the file that you should submit to the Udacity reviews system.
+        # able to perform search:
+        if depth > 0:
+            for move in game.get_legal_moves(active_player):
+                # next game:
+                next_game = game.forecast_move(move)
+                # next game utility:
+                utility = self._minimize(active_player, next_game, depth - 1)
+                # update max utility move:
+                if max_utility < utility:
+                    max_utility = utility
+                    max_move = move
 
+        return max_move
+```
 
-## Game Visualization
+### Alpha-Beta Search and Iterative Deepening
 
-The `isoviz` folder contains a modified version of chessboard.js that can animate games played on a 7x7 board.  In order to use the board, you must run a local webserver by running `python -m http.server 8000` from your project directory (you can replace 8000 with another port number if that one is unavailable), then open your browser to `http://localhost:8000` and navigate to the `/isoviz/display.html` page.  Enter the move history of an isolation match (i.e., the array returned by the Board.play() method) into the text area and run the match.  Refresh the page to run a different game.  (Feel free to submit pull requests with improvements to isoviz.)
+The min-max search agent with alpha-beta pruning and iterative deepening is implemented as follows.
+The implementation follows the <a href="">AIMA Pseudocode</a>
 
+---
+__function__ ALPHA-BETA-SEARCH(_state_) __returns__ an action  
+&emsp;_v_ &larr; MAX\-VALUE(_state_, &minus;&infin;, &plus;&infin;)  
+&emsp;__return__ the _action_ in ACTIONS(_state_) with value _v_  
 
-## PvP Competition
+---
+__function__ MAX\-VALUE(_state_, _&alpha;_, _&beta;_) __returns__ _a utility value_  
+&emsp;__if__ TERMINAL\-TEST(_state_) __then return__ UTILITY(_state_)  
+&emsp;_v_ &larr; &minus;&infin;  
+&emsp;__for each__ _a_ __in__ ACTIONS(_state_) __do__  
+&emsp;&emsp;&emsp;_v_ &larr; MAX(_v_, MIN\-VALUE(RESULT(_state_, _a_), _&alpha;_, _&beta;_))  
+&emsp;&emsp;&emsp;__if__ _v_ &ge; _&beta;_ __then return__ _v_  
+&emsp;&emsp;&emsp;_&alpha;_ &larr; MAX(_&alpha;_, _v_)  
+&emsp;__return__ _v_  
 
-Once your project has been reviewed and accepted by meeting all requirements of the rubric, you are invited to complete the `competition_agent.py` file using any combination of techniques and improvements from lectures or online, and then submit it to compete in a tournament against other students from your cohort and past cohort champions.  Additional details (official rules, submission deadline, etc.) will be provided separately.
+---
+__function__ MIN\-VALUE(_state_, _&alpha;_, _&beta;_) __returns__ _a utility value_  
+&emsp;__if__ TERMINAL\-TEST(_state_) __then return__ UTILITY(_state_)  
+&emsp;_v_ &larr; &plus;&infin;  
+&emsp;__for each__ _a_ __in__ ACTIONS(_state_) __do__  
+&emsp;&emsp;&emsp;_v_ &larr; MIN(_v_, MAX\-VALUE(RESULT(_state_, _a_), _&alpha;_, _&beta;_))  
+&emsp;&emsp;&emsp;__if__ _v_ &le; _&alpha;_ __then return__ _v_  
+&emsp;&emsp;&emsp;_&beta;_ &larr; MIN(_&beta;_, _v_)  
+&emsp;__return__ _v_  
 
-The competition agent can be submitted using the Udacity project assistant:
+```python
+class AlphaBetaPlayer(IsolationPlayer):
+    """Game-playing agent that chooses a move using iterative deepening minimax
+    search with alpha-beta pruning. You must finish and test this player to
+    make sure it returns a good move before the search time limit expires.
+    """
 
-    udacity submit isolation-pvp
+    def get_move(self, game, time_left):
+        """Search for the best move from the available legal moves and return a
+        result before the time limit expires.
+
+        Modify the get_move() method from the MinimaxPlayer class to implement
+        iterative deepening search instead of fixed-depth search.
+
+        **********************************************************************
+        NOTE: If time_left() < 0 when this function returns, the agent will
+              forfeit the game due to timeout. You must return _before_ the
+              timer reaches 0.
+        **********************************************************************
+
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+
+        time_left : callable
+            A function that returns the number of milliseconds left in the
+            current turn. Returning with any less than 0 ms remaining forfeits
+            the game.
+
+        Returns
+        -------
+        (int, int)
+            Board coordinates corresponding to a legal move; may return
+            (-1, -1) if there are no available legal moves.
+        """
+        self.time_left = time_left
+
+        # Initialize the best move so that this function returns something
+        # in case the search fails due to timeout
+        best_move = (-1, -1)
+
+        # maximum depth:
+        N = game.width * game.height
+
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            for max_depth in range(1, N + 1):
+                best_move = self.alphabeta(game, max_depth)
+        except SearchTimeout:
+            pass  # Handle any actions required after timeout as needed
+
+        # Return the best move from the last completed search iteration
+        return best_move
+
+    def _maximize(self, active_player, game, depth, alpha, beta):
+        """ Implement minimization node in adversarial search with alpha-beta pruning
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # alpha-beta window test:
+        if alpha > beta:
+            return float("-inf")
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do maximization:
+        max_utility = float("-inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._minimize(active_player, next_game, depth - 1, alpha, beta)
+            # pruning test:
+            if utility >= beta:
+                return utility
+            # update max utility:
+            max_utility = max(max_utility, utility)
+            # update alpha:
+            alpha = max(alpha, max_utility)
+
+        return max_utility
+
+    def _minimize(self, active_player, game, depth, alpha, beta):
+        """ Implement minimization node in adversarial search with alpha-beta pruning
+        Parameters
+        ----------
+        active_player : object
+            Active player that launches minimax search
+
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        Returns
+        -------
+        score : float
+            input game utility
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # alpha-beta window test:
+        if alpha > beta:
+            return float("inf")
+
+        # use score function when maximum depth is reached:
+        if depth == 0:
+            return self.score(game, active_player)
+
+        # termination test:
+        termination_utility = game.utility(active_player)
+        if termination_utility != 0:
+            return termination_utility
+
+        # do minimization:
+        min_utility = float("inf")
+
+        for move in game.get_legal_moves(game.active_player):
+            # next game:
+            next_game = game.forecast_move(move)
+            # next game utility:
+            utility = self._maximize(active_player, next_game, depth - 1, alpha, beta)
+            # pruning test:
+            if utility <= alpha:
+                return utility
+            # update min utility:
+            min_utility = min(min_utility, utility)
+            # update beta:
+            beta = min(beta, min_utility)
+
+        return min_utility
+
+    def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
+        """Implement depth-limited minimax search with alpha-beta pruning as
+        described in the lectures.
+
+        This should be a modified version of ALPHA-BETA-SEARCH in the AIMA text
+        https://github.com/aimacode/aima-pseudocode/blob/master/md/Alpha-Beta-Search.md
+
+        **********************************************************************
+            You MAY add additional methods to this class, or define helper
+                 functions to implement the required functionality.
+        **********************************************************************
+
+        Parameters
+        ----------
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        depth : int
+            Depth is an integer representing the maximum number of plies to
+            search in the game tree before aborting
+
+        alpha : float
+            Alpha limits the lower bound of search on minimizing layers
+
+        beta : float
+            Beta limits the upper bound of search on maximizing layers
+
+        Returns
+        -------
+        (int, int)
+            The board coordinates of the best move found in the current search;
+            (-1, -1) if there are no legal moves
+
+        Notes
+        -----
+            (1) You MUST use the `self.score()` method for board evaluation
+                to pass the project tests; you cannot call any other evaluation
+                function directly.
+
+            (2) If you use any helper functions (e.g., as shown in the AIMA
+                pseudocode) then you must copy the timer check into the top of
+                each helper function or else your agent will timeout during
+                testing.
+        """
+        # time out test:
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        # identify active player:
+        active_player = game.active_player
+
+        # identify max utility move:
+        max_utility = float("-inf")
+        max_move = (-1, -1)
+
+        # able to perform search:
+        if depth > 0 and alpha <= beta:
+            for move in game.get_legal_moves(active_player):
+                # next game:
+                next_game = game.forecast_move(move)
+                # next game utility:
+                utility = self._minimize(active_player, next_game, depth - 1, alpha, beta)
+                # update max utility move:
+                if max_utility < utility:
+                    max_utility = utility
+                    max_move = move
+                # update alpha:
+                alpha = max(alpha, max_utility)
+
+        return max_move
+```
+
+## Heuristic Analysis
+
+### Heuristics Implementation
+
+Here three extra heuristics are implemented.
+
+The **first** one is just a simple modification of  the improved heuristic.
+Here L2 norm is used to encourage the agent to pursuit a larger margin of the number of legal moves between active and opponent players.
+
+```python
+def custom_score(game, player):
+    """Calculate the heuristic value of a game state from the point of view
+    of the given player.
+
+    This should be the best heuristic function for your project submission.
+
+    Note: this function should be called from within a Player instance as
+    `self.score()` -- you should not need to call this function directly.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
+
+    # heuristic score:
+    delta = float(num_active_moves - num_opponent_moves)
+
+    score = np.sign(delta) * (delta**2)
+
+    return score
+```
+
+The **second** one is also a simple modification of the improved heuristic.
+Here L3 norm is used to encourage the agent to pursuit a larger margin of the number of legal moves between active and opponent players.
+
+```python
+def custom_score_2(game, player):
+    """Calculate the heuristic value of a game state from the point of view
+    of the given player.
+
+    Note: this function should be called from within a Player instance as
+    `self.score()` -- you should not need to call this function directly.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
+
+    # heuristic score:
+    delta = float(num_active_moves - num_opponent_moves)
+
+    score = delta**3
+
+    return score
+```
+
+The **third** one combines the ideas from improved and center heuristics.
+Here a combined score is calculated from both the difference of number of legal moves and center score
+between active and opponent players.
+
+```python
+def custom_score_3(game, player):
+    """Calculate the heuristic value of a game state from the point of view
+    of the given player.
+
+    Note: this function should be called from within a Player instance as
+    `self.score()` -- you should not need to call this function directly.
+
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        The heuristic value of the current game state to the specified player.
+    """
+    # termination:
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    def get_player_center_score(player):
+        """Calculate center score for input legal moves
+        """
+        w, h = game.width / 2., game.height / 2.
+        y, x = game.get_player_location(player)
+
+        return (h - y)**2 + (w - x)**2
+
+    # identify opponent:
+    opponent = game.get_opponent(player)
+
+    # active center score:
+    score_active = get_player_center_score(player)
+    # opponent center score:
+    score_opponent = get_player_center_score(opponent)
+
+    # heuristic score:
+    delta_center_score = float(score_active - score_opponent)
+    score_center_score = delta_center_score
+
+    # active moves:
+    num_active_moves = len(game.get_legal_moves(player))
+    # opponent moves:
+    num_opponent_moves = len(game.get_legal_moves(opponent))
+
+    # heuristic score:
+    delta_num_moves = float(num_active_moves - num_opponent_moves)
+    score_num_moves = np.sign(delta_num_moves) * (delta_num_moves**2)
+
+    score = 0.382 * score_center_score + 0.618 * score_num_moves
+
+    return score
+```
+
+### Performance Analysis
+
+The tournament is runned three times and the results are as follows:
+```shell
+*************************                         
+     Playing Matches                              
+*************************                         
+
+Match #   Opponent    AB_Improved   AB_Custom   AB_Custom_2  AB_Custom_3
+Won | Lost   Won | Lost   Won | Lost   Won | Lost
+1       Random      10  |   0    10  |   0     9  |   1     8  |   2  
+2       MM_Open      6  |   4     6  |   4     7  |   3     6  |   4  
+3      MM_Center     6  |   4     9  |   1     7  |   3     5  |   5  
+4     MM_Improved    6  |   4     6  |   4     6  |   4     5  |   5  
+5       AB_Open      5  |   5     6  |   4     3  |   7     6  |   4  
+6      AB_Center     7  |   3     6  |   4     5  |   5     6  |   4  
+7     AB_Improved    4  |   6     4  |   6     5  |   5     5  |   5  
+--------------------------------------------------------------------------
+Win Rate:      62.9%        67.1%        60.0%        58.6%  
+```
