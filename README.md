@@ -685,20 +685,21 @@ def custom_score_3(game, player):
 ### Performance Analysis
 
 The tournament is runned three times and the results are as follows:
-```shell
-*************************                         
-     Playing Matches                              
-*************************                         
 
-Match #   Opponent    AB_Improved   AB_Custom   AB_Custom_2  AB_Custom_3
-Won | Lost   Won | Lost   Won | Lost   Won | Lost
-1       Random      10  |   0    10  |   0     9  |   1     8  |   2  
-2       MM_Open      6  |   4     6  |   4     7  |   3     6  |   4  
-3      MM_Center     6  |   4     9  |   1     7  |   3     5  |   5  
-4     MM_Improved    6  |   4     6  |   4     6  |   4     5  |   5  
-5       AB_Open      5  |   5     6  |   4     3  |   7     6  |   4  
-6      AB_Center     7  |   3     6  |   4     5  |   5     6  |   4  
-7     AB_Improved    4  |   6     4  |   6     5  |   5     5  |   5  
+```shell
+                        *************************                         
+                             Playing Matches                              
+                        *************************                         
+
+ Match #   Opponent    AB_Improved   AB_Custom   AB_Custom_2  AB_Custom_3
+                        Won | Lost   Won | Lost   Won | Lost   Won | Lost
+    1       Random      10  |   0    10  |   0     9  |   1     8  |   2  
+    2       MM_Open      6  |   4     6  |   4     7  |   3     6  |   4  
+    3      MM_Center     6  |   4     9  |   1     7  |   3     5  |   5  
+    4     MM_Improved    6  |   4     6  |   4     6  |   4     5  |   5  
+    5       AB_Open      5  |   5     6  |   4     3  |   7     6  |   4  
+    6      AB_Center     7  |   3     6  |   4     5  |   5     6  |   4  
+    7     AB_Improved    4  |   6     4  |   6     5  |   5     5  |   5  
 --------------------------------------------------------------------------
-Win Rate:      62.9%        67.1%        60.0%        58.6%  
+           Win Rate:      62.9%        67.1%        60.0%        58.6%    
 ```
