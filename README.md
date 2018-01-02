@@ -684,8 +684,9 @@ def custom_score_3(game, player):
 
 ### Performance Analysis
 
-The tournament is runned three times and the results are as follows:
+The performance analysis carried out three times and the results are as follows:
 
+**Tournament 1**
 ```shell
                         *************************                         
                              Playing Matches                              
@@ -703,3 +704,49 @@ The tournament is runned three times and the results are as follows:
 --------------------------------------------------------------------------
            Win Rate:      62.9%        67.1%        60.0%        58.6%    
 ```
+
+**Tournament 2**
+```shell
+                        *************************                         
+                             Playing Matches                              
+                        *************************                         
+
+ Match #   Opponent    AB_Improved   AB_Custom   AB_Custom_2  AB_Custom_3
+                        Won | Lost   Won | Lost   Won | Lost   Won | Lost
+    1       Random       7  |   3     7  |   3     7  |   3    10  |   0  
+    2       MM_Open      6  |   4     7  |   3     7  |   3     7  |   3  
+    3      MM_Center     6  |   4     5  |   5    10  |   0     8  |   2  
+    4     MM_Improved    6  |   4     6  |   4     6  |   4     5  |   5  
+    5       AB_Open      5  |   5     5  |   5     5  |   5     7  |   3  
+    6      AB_Center     7  |   3     7  |   3     6  |   4     6  |   4  
+    7     AB_Improved    5  |   5     6  |   4     6  |   4     4  |   6  
+--------------------------------------------------------------------------
+           Win Rate:      60.0%        61.4%        67.1%        67.1%    
+```
+
+**Tournament 3**
+```shell
+                        *************************                         
+                             Playing Matches                              
+                        *************************                         
+
+ Match #   Opponent    AB_Improved   AB_Custom   AB_Custom_2  AB_Custom_3
+                        Won | Lost   Won | Lost   Won | Lost   Won | Lost
+    1       Random       8  |   2     9  |   1     8  |   2    10  |   0  
+    2       MM_Open      5  |   5     6  |   4     9  |   1     8  |   2  
+    3      MM_Center     7  |   3     6  |   4     7  |   3     8  |   2  
+    4     MM_Improved    6  |   4     8  |   2     5  |   5     8  |   2  
+    5       AB_Open      4  |   6     7  |   3     7  |   3     4  |   6  
+    6      AB_Center     6  |   4     5  |   5     5  |   5     4  |   6  
+    7     AB_Improved    5  |   5     7  |   3     5  |   5     4  |   6  
+--------------------------------------------------------------------------
+           Win Rate:      58.6%        68.6%        65.7%        65.7%    
+```
+
+The first custom heuristic, the one using L2 norm, outperforms the baseline one 3 out of 3 times.
+
+I think the first custom heuristic should be used for the following reasons:
+
+1. Steadily improved performance over the baseline heuristic.
+2. No extra computing overhead(compared with heuristics based on complex human knowledge).
+3. No hyper-parameter tuning(compared with the third custom heuristic).
